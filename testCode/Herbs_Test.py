@@ -9,13 +9,13 @@ from sklearn import svm
 import tkinter
 from tkinter import filedialog
 import openpyxl
-
+#----------------机器学习:用向量机进行匹配---------------
 def getsvm(trainSet,tmpltSet,ptnset):
     clf = svm.SVC(kernel='linear', C = 1.0)
     clf.fit(trainSet, tmpltSet)
     result = clf.predict(ptnset)
     return result
-
+#------------------获取excel文件路径---------------
 def getExcelFilePath():
     while True:
         question = input("Do you want to get a excel file?(yes(y)/no(n)")[0]
@@ -54,7 +54,7 @@ def getSetDatas(path, sheetName ,selectItemName):
     result = (TrainSetArray, TmpltSetArray, PtnSetArray)
 
     return result
-
+#----------------write to Excel File--------------------
 def writeToExcelFile(path, resultDict):
     keyList = []
     valueList = []
@@ -69,16 +69,15 @@ def writeToExcelFile(path, resultDict):
     writer.save()
     writer.close()
     print("Write to the excel file successfully!")
-
+#---------------main function-------------------
 def main():
     sheetName = 'GdaSet'
+    path = getExcelFilePath()
     try:
-        path = getExcelFilePath()
         SourceData = pd.read_excel(path, sheet_name=sheetName)
         data = SourceData.set_index("中药名称")
     except:
-        print("Can\'t get the sourceData")
-        return
+        print("Can\'t get the source data")
     resultDict = {}
     while True:
         itemNames = list(data.index)
@@ -90,10 +89,9 @@ def main():
             print("The done, bye~")
             break
         elif choice in ["n", "N"]:
-            selectItemNum = eval(input("Enter the selected herb name:"))
+            selectItemNum = eval(input("Enter the selected herb number:"))
             while selectItemNum not in dict(enumerate(itemNames)).keys():
-                print(selectItemNum)
-                selectItemNum = eval(input("herb name input error!, Enter the selected herb name again:"))
+                selectItemNum = eval(input("herb number input error!, Enter the selected herb name again:"))
             setDatas = getSetDatas(path, sheetName, itemNames[selectItemNum])
             matchResult = getsvm(setDatas[0], setDatas[1], setDatas[2])[0]
             print("The match result: \n", matchResult)
