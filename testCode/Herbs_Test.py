@@ -36,7 +36,7 @@ def getExcelFilePath():
 
 #----- get trainSet, ptnSet and tmpltSet-----
 def getSetDatas(path, sheetName ,selectItemName):
-    SourceData = pd.read_excel(path, sheet_name=sheetName)
+    SourceData = pd.read_excel(path, sheet_name=sheetName, engine="openpyxl")
     data = SourceData.set_index("中药名称")
     popItem = data.drop(index=selectItemName)
 
@@ -74,13 +74,22 @@ def main():
     sheetName = 'GdaSet'
     path = getExcelFilePath()
     try:
-        SourceData = pd.read_excel(path, sheet_name=sheetName)
+        SourceData = pd.read_excel(path, sheet_name=sheetName, engine="openpyxl")
         data = SourceData.set_index("中药名称")
     except:
         print("Can\'t get the source data")
+    
     resultDict = {}
+    itemNames = list(data.index)
+    for item in itemNames:
+        setDatas = getSetDatas(path, sheetName, item)
+        matchResult = getsvm(setDatas[0], setDatas[1], setDatas[2])[0]
+        print("The herb:{0:}, match result: {1:}\n".format(item, matchResult))
+        resultDict[item] = matchResult
+    writeToExcelFile(path, resultDict)
+
+    '''
     while True:
-        itemNames = list(data.index)
         print("The herb items:".center(30, "-"))
         for index, value in enumerate(itemNames):
             print("{0:<10} {1:>10}".format(index, value))
@@ -99,7 +108,8 @@ def main():
         else:
             print("The choice is wrong, try again!")
     writeToExcelFile(path, resultDict)
-
+    '''
+    
 if __name__ == "__main__":
     main()
 
