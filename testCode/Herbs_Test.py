@@ -35,9 +35,8 @@ def getExcelFilePath():
             print("The choice is wrong, try again:")
 
 #----- get trainSet, ptnSet and tmpltSet-----
-def getSetDatas(path, sheetName ,selectItemName):
-    SourceData = pd.read_excel(path, sheet_name=sheetName, engine="openpyxl")
-    data = SourceData.set_index("中药名称")
+def getSetDatas(data, selectItemName):
+    #SourceData = pd.read_excel(path, sheet_name=sheetName, engine="openpyxl")  
     popItem = data.drop(index=selectItemName)
 
     #Train set
@@ -54,14 +53,14 @@ def getSetDatas(path, sheetName ,selectItemName):
     result = (TrainSetArray, TmpltSetArray, PtnSetArray)
 
     return result
+
 #----------------write to Excel File--------------------
-def writeToExcelFile(path, resultDict):
-    keyList = []
-    valueList = []
-    for key in resultDict.keys():
-        keyList.append(key)
-        valueList.append(resultDict[key])
-    dataResult = pd.DataFrame({"待测药":keyList, "匹配药":valueList})
+def writeToExcelFile(path, resultList):
+    selectedHerbName = resultList[:, 0]
+    attribute_selected = resultList[:, 1]
+    matchedHerbName = resultList[:, 2]
+    attribute_matched  = resultList[:, 3]
+    dataResult = pd.DataFrame({"待测药":selectedHerbName, "待测药趋向性":attribute_selected, "匹配药":matchedHerbName, "匹配药趋向性":attribute_matched})
     wb = openpyxl.load_workbook(path)
     writer = pd.ExcelWriter(path, engine="openpyxl")
     writer.book = wb
@@ -69,47 +68,32 @@ def writeToExcelFile(path, resultDict):
     writer.save()
     writer.close()
     print("Write to the excel file successfully!")
+
+#---------------handle source data--------------
+def handleSourceData(path, sheetName):
+    with pd.ExcelFile(path) as xlsbook:
+        SourceData = pd.read_excel(xlsbook, sheet_name=sheetName)
+        SourceData = SourceData.set_index("中药名称").loc[:, "趋向性":]
+        SourceData = SourceData.dropna(axis=0) #除去含有缺失值的行
+        #SourceData = SourceData.dropna(axis=1) #除去含有缺失值的列
+    return SourceData
+
 #---------------main function-------------------
 def main():
     sheetName = 'GdaSet'
     path = getExcelFilePath()
-    try:
-        SourceData = pd.read_excel(path, sheet_name=sheetName, engine="openpyxl")
-        data = SourceData.set_index("中药名称")
-    except:
-        print("Can\'t get the source data")
-    
-    resultDict = {}
-    itemNames = list(data.index)
+    Data = handleSourceData(path, sheetName)
+    resultList = []
+    itemNames = list(Data.index)
     for item in itemNames:
-        setDatas = getSetDatas(path, sheetName, item)
+        attribute_item = int(Data.loc[item, ["趋向性"]].values[0])
+        dataSample = Data.loc[:, "C数":]
+        setDatas = getSetDatas(dataSample, item)
         matchResult = getsvm(setDatas[0], setDatas[1], setDatas[2])[0]
-        print("The herb:{0:}, match result: {1:}\n".format(item, matchResult))
-        resultDict[item] = matchResult
-    writeToExcelFile(path, resultDict)
+        attribute_result = int(Data.loc[matchResult, ["趋向性"]].values[0])
+        print("The herb:{0:}, attribute_item:{1:}, match result: {2:}, attribute_result:{3:}\n".format(item, attribute_item, matchResult, attribute_result))
+        resultList.append([item, attribute_item, matchResult, attribute_result])
+    writeToExcelFile(path, np.array(resultList))
 
-    '''
-    while True:
-        print("The herb items:".center(30, "-"))
-        for index, value in enumerate(itemNames):
-            print("{0:<10} {1:>10}".format(index, value))
-        choice = input("Do you want to quit?(y/n)")[0]
-        if choice in ["y", "Y"]:
-            print("The done, bye~")
-            break
-        elif choice in ["n", "N"]:
-            selectItemNum = eval(input("Enter the selected herb number:"))
-            while selectItemNum not in dict(enumerate(itemNames)).keys():
-                selectItemNum = eval(input("herb number input error!, Enter the selected herb name again:"))
-            setDatas = getSetDatas(path, sheetName, itemNames[selectItemNum])
-            matchResult = getsvm(setDatas[0], setDatas[1], setDatas[2])[0]
-            print("The match result: \n", matchResult)
-            resultDict[itemNames[selectItemNum]] = matchResult
-        else:
-            print("The choice is wrong, try again!")
-    writeToExcelFile(path, resultDict)
-    '''
-    
 if __name__ == "__main__":
     main()
-
