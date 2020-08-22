@@ -4,9 +4,8 @@ import struct
 import os
 from tqdm import tqdm
 from retry import retry
-
-
-
+import tkinter
+from tkinter import filedialog
 
 class Voicesplit(object):
     def __init__(self, musicFileName, outFilePath):
@@ -21,8 +20,6 @@ class Voicesplit(object):
         # 单个音频最小时间长度（秒）
         self.voiceMinSecond = 0.1
 
-
-
     # wav文件写入,分时间间隔
     def wavWriteByTime(self, musicFileName, outData, voiceTime1, voiceTime2):
         outData = outData[voiceTime1:voiceTime2]
@@ -33,7 +30,6 @@ class Voicesplit(object):
             os.makedirs(fileSavePath)
 
         outfile = os.path.join(fileSavePath,os.path.splitext(os.path.split(musicFileName)[-1])[0] + '_%d_%d_%s_split.wav' % (voiceTime1, voiceTime2, self.sample_rate))
-
 
         # 判断文件是否存在
         if not os.path.exists(outfile):
@@ -50,7 +46,6 @@ class Voicesplit(object):
                 outwave.setparams((nchannels, sampwidth, framerate, nframes, comptype, compname))
                 for v in outData:
                     outwave.writeframes(struct.pack('h', int(v * 64000 / 2)))
-
 
     # 分割声音，分段保存
     @retry(tries=5, delay=2)
@@ -103,9 +98,34 @@ class Voicesplit(object):
             voiceTime2 = int(min(sig.shape[0], voiceTime[-1] + 0.8 * self.sample_rate))
             self.wavWriteByTime(musicFileName=self.musicFileName, outData=inputData, voiceTime1=voiceTime1, voiceTime2=voiceTime2)
 
+def get_sound_file_paths():
+    path_array = []
+    while True:
+        answer = input("Do you want to search the sound file:(y/n)")[0]
+        if answer == "y":
+            win = tkinter.Tk()
+            win.withdraw()
+            filename = filedialog.askopenfilename().replace("/", "\\")
+            if filename[-4:] == ".wav":
+                path_array.append(filename)
+                print("Input successfully!")
+            else:
+                print("The file you input is not the true file, try again!")
+                continue
+        elif answer == "n":
+            print("Exit successfully!")
+            break
+        else:
+            print("The command you input error, try again!")
+            continue
+    print("Already get files information:")
+    for i in range(len(path_array)):
+        print("get the {0} sound file: {1}".format(i+1, path_array[i]))
+    
+    return path_array
 
 if __name__ == '__main__':
     # 在此输入你的音频文件
-    musicFileName = '***'
+    musicFileName = get_sound_file_paths()[0]
     voice = Voicesplit(musicFileName=musicFileName, outFilePath='outFile')
     voice.splitVoiceAndSave()
